@@ -2,7 +2,7 @@ import type { Core } from '@strapi/strapi';
 import { z } from 'zod';
 import type { ToolDefinition } from './index';
 
-const CONTENT_TYPE_UID = 'plugin::ai-sdk-transcripts.transcript';
+const CONTENT_TYPE_UID = 'plugin::ai-sdk-yt-transcripts.transcript';
 
 const TRANSCRIPT_PREVIEW_LENGTH = 244;
 

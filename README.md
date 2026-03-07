@@ -13,7 +13,7 @@ Fetch, search, and browse YouTube transcripts directly from the Strapi admin cha
 ## Installation
 
 ```bash
-npm install strapi-plugin-ai-sdk-transcripts
+npm install strapi-plugin-ai-sdk-yt-transcripts
 ```
 
 ## Configuration
@@ -31,9 +31,9 @@ export default ({ env }) => ({
     },
   },
 
-  "ai-sdk-transcripts": {
+  "ai-sdk-yt-transcripts": {
     enabled: true,
-    resolve: "strapi-plugin-ai-sdk-transcripts",
+    resolve: "strapi-plugin-ai-sdk-yt-transcripts",
     config: {
       proxyUrl: env("PROXY_URL"),           // Optional: HTTP/HTTPS proxy for YouTube requests
       chunkSizeSeconds: 300,                // Chunk size for transcript pagination (default: 5 min)
@@ -124,42 +124,62 @@ Searches across all saved transcripts by title, video ID, or content.
 - `includeFullContent` — return full transcript text (default: 244-char preview)
 - `page`, `pageSize`, `sort` — pagination and sorting
 
-## How It Works
+## REST API
 
-On startup, the plugin's `bootstrap` function accesses the ai-sdk plugin's tool registry and registers all 5 tools directly:
+The plugin also exposes a REST endpoint for direct transcript access (no AI chat needed):
 
-```ts
-// bootstrap.ts (simplified)
-const aiSdk = strapi.plugin('ai-sdk');
-for (const tool of tools) {
-  aiSdk.toolRegistry.register(tool);
-}
+```
+GET /api/ai-sdk-yt-transcripts/yt-transcript/:videoId
 ```
 
-Once registered, the ai-sdk handles the rest — tools are available in admin chat, public chat (since all are `publicSafe`), and exposed on the MCP server as snake_case names (`fetch_transcript`, `get_transcript`, etc.).
+Fetches the transcript for the given video ID. If it's already cached in the database, returns the cached version. Otherwise, fetches from YouTube, saves it, and returns the result.
+
+Available on both content API (public, requires Users & Permissions) and admin API routes.
+
+## How It Works
+
+The plugin exposes an `ai-tools` service that the ai-sdk discovers automatically at boot time. The ai-sdk registers each tool with a namespace prefix (`ai-sdk-yt-transcripts__`) so they appear as a separate plugin source in the UI.
+
+```ts
+// services/ai-tools.ts
+import { tools } from '../tools';
+
+export default () => ({
+  getTools() {
+    return tools;
+  },
+});
+```
+
+Once discovered, the ai-sdk handles the rest — tools are available in admin chat, public chat (since all are `publicSafe`), and exposed on the MCP server as snake_case names (`ai_sdk_transcripts__fetch_transcript`, etc.).
 
 ### Architecture
 
 ```
-┌──────────────────────────────────┐
-│  Strapi Admin Chat / MCP Client  │
-└──────────────┬───────────────────┘
+┌──────────────────────────────────────┐
+│  Strapi Admin Chat / MCP Client      │
+└──────────────┬───────────────────────┘
                │
-┌──────────────▼───────────────────┐
-│  strapi-plugin-ai-sdk            │
-│  ┌─────────────────────────────┐ │
-│  │  Tool Registry              │ │
-│  │  ├── built-in tools         │ │
-│  │  ├── fetchTranscript        │◄├──── registered by this plugin
-│  │  ├── getTranscript          │◄├──── at boot time
-│  │  ├── searchTranscript       │◄├
-│  │  ├── listTranscripts        │◄├
-│  │  └── findTranscripts        │◄├
-│  └─────────────────────────────┘ │
-│  ┌──────────┐  ┌──────────────┐  │
-│  │ AI Chat  │  │  MCP Server  │  │
-│  └──────────┘  └──────────────┘  │
-└──────────────────────────────────┘
+┌──────────────▼───────────────────────┐
+│  strapi-plugin-ai-sdk                │
+│  ┌─────────────────────────────────┐ │
+│  │  Tool Registry                  │ │
+│  │  ├── built-in tools             │ │
+│  │  ├── ai-sdk-yt-transcripts__*      │◄├── discovered via ai-tools service
+│  │  └── other-plugin__*            │ │
+│  └─────────────────────────────────┘ │
+│  ┌──────────┐  ┌──────────────┐      │
+│  │ AI Chat  │  │  MCP Server  │      │
+│  └──────────┘  └──────────────┘      │
+└──────────────────────────────────────┘
+
+┌──────────────────────────────────────┐
+│  strapi-plugin-ai-sdk-yt-transcripts    │
+│  ├── ai-tools service (5 tools)      │
+│  ├── REST API (GET /yt-transcript/)  │
+│  ├── Transcript content type         │
+│  └── YouTube fetching service        │
+└──────────────────────────────────────┘
 ```
 
 ### YouTube transcript fetching
@@ -177,7 +197,7 @@ Transcripts are fetched once and cached in the database. Subsequent requests for
 
 The plugin creates one collection type:
 
-**Transcript** (`plugin::ai-sdk-transcripts.transcript`)
+**Transcript** (`plugin::ai-sdk-yt-transcripts.transcript`)
 
 | Field | Type | Description |
 |-------|------|-------------|

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { extractYouTubeID } from '../utils/extract-youtube-id';
 import type { ToolDefinition } from './index';
 
-const PLUGIN_ID = 'ai-sdk-transcripts';
+const PLUGIN_ID = 'ai-sdk-yt-transcripts';
 
 interface PluginConfig {
   previewLength?: number;

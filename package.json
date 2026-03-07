@@ -1,12 +1,12 @@
 {
-  "name": "strapi-plugin-ai-sdk-transcripts",
+  "name": "strapi-plugin-ai-sdk-yt-transcripts",
   "version": "1.0.1",
   "description": "AI SDK extension plugin for YouTube transcript tools",
   "license": "MIT",
   "author": "Paul Brats <codingafterthirty@gmail.com>",
   "type": "commonjs",
   "keywords": [
-    "strapi-plugin-ai-sdk-transcripts",
+    "strapi-plugin-ai-sdk-yt-transcripts",
     "strapi",
     "plugin",
     "ai-sdk",
@@ -83,7 +83,7 @@
   },
   "strapi": {
     "kind": "plugin",
-    "name": "ai-sdk-transcripts",
+    "name": "ai-sdk-yt-transcripts",
     "displayName": "AI SDK: Transcripts",
     "description": "YouTube transcript tools for the AI SDK plugin"
   },

@@ -1,1 +1,1 @@
-export const PLUGIN_ID = 'ai-sdk-transcripts';
+export const PLUGIN_ID = 'ai-sdk-yt-transcripts';

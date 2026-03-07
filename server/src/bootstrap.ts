@@ -1,8 +1,7 @@
 import type { Core } from '@strapi/strapi';
 import { ProxyAgent, fetch as undiciFetch } from 'undici';
-import { tools } from './tools';
 
-const PLUGIN_ID = 'ai-sdk-transcripts';
+const PLUGIN_ID = 'ai-sdk-yt-transcripts';
 
 interface PluginConfig {
   proxyUrl?: string;
@@ -35,23 +34,8 @@ async function testProxyConnection(proxyUrl: string): Promise<{ success: boolean
 }
 
 const bootstrap = async ({ strapi }: { strapi: Core.Strapi }) => {
-  // Register tools with ai-sdk
-  const aiSdk = strapi.plugin('ai-sdk') as any;
-
-  if (!aiSdk?.toolRegistry) {
-    strapi.log.warn(
-      `[${PLUGIN_ID}] strapi-plugin-ai-sdk not found. Tools will not be registered.`
-    );
-    return;
-  }
-
-  for (const tool of tools) {
-    aiSdk.toolRegistry.register(tool);
-  }
-
-  strapi.log.info(
-    `[${PLUGIN_ID}] Registered ${tools.length} tools with ai-sdk.`
-  );
+  // Tools are registered via the ai-tools service (see services/ai-tools.ts).
+  // The ai-sdk plugin discovers and registers them automatically with namespace prefixing.
 
   // Log proxy configuration status and test connectivity
   const pluginConfig = strapi.config.get(`plugin::${PLUGIN_ID}`) as PluginConfig | undefined;

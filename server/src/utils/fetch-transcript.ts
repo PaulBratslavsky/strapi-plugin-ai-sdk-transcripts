@@ -109,13 +109,13 @@ function createProxyFetch(proxyUrl?: string): typeof fetch | undefined {
 
     // Log request details
     const urlPath = new URL(url).pathname;
-    console.log(`[ai-sdk-transcripts] Proxy ${method} ${urlPath} via ${maskedProxyUrl}`);
+    console.log(`[ai-sdk-yt-transcripts] Proxy ${method} ${urlPath} via ${maskedProxyUrl}`);
 
     const response = await undiciFetch(url, options);
 
     // Log response status
     if (!response.ok) {
-      console.log(`[ai-sdk-transcripts] Proxy response: ${response.status} ${response.statusText}`);
+      console.log(`[ai-sdk-yt-transcripts] Proxy response: ${response.status} ${response.statusText}`);
     }
 
     return response;
@@ -251,9 +251,9 @@ async function fetchTranscriptFromYouTube(
   // Log proxy status for debugging
   if (options?.proxyUrl) {
     const maskedUrl = options.proxyUrl.replace(/:([^@:]+)@/, ':****@');
-    console.log(`[ai-sdk-transcripts] Fetching video ${videoId} via proxy: ${maskedUrl}`);
+    console.log(`[ai-sdk-yt-transcripts] Fetching video ${videoId} via proxy: ${maskedUrl}`);
   } else {
-    console.log(`[ai-sdk-transcripts] Fetching video ${videoId} without proxy`);
+    console.log(`[ai-sdk-yt-transcripts] Fetching video ${videoId} without proxy`);
   }
 
   // 1. Create Innertube client with optional proxy
@@ -276,9 +276,9 @@ async function fetchTranscriptFromYouTube(
   const playabilityStatus = (info as any).playability_status;
 
   // Log detailed info for debugging
-  console.log(`[ai-sdk-transcripts] Video ${videoId} - Title: ${info.basic_info?.title || 'Unknown'}`);
-  console.log(`[ai-sdk-transcripts] Video ${videoId} - Playability: ${playabilityStatus?.status || 'Unknown'}`);
-  console.log(`[ai-sdk-transcripts] Video ${videoId} - Caption tracks found: ${captionTracks?.length || 0}`);
+  console.log(`[ai-sdk-yt-transcripts] Video ${videoId} - Title: ${info.basic_info?.title || 'Unknown'}`);
+  console.log(`[ai-sdk-yt-transcripts] Video ${videoId} - Playability: ${playabilityStatus?.status || 'Unknown'}`);
+  console.log(`[ai-sdk-yt-transcripts] Video ${videoId} - Caption tracks found: ${captionTracks?.length || 0}`);
 
   if (!captionTracks || captionTracks.length === 0) {
     // Check playability status for more details
@@ -286,13 +286,13 @@ async function fetchTranscriptFromYouTube(
     const reason = playabilityStatus?.reason;
     const subreason = playabilityStatus?.messages?.[0] || playabilityStatus?.subreason;
 
-    console.log(`[ai-sdk-transcripts] Video ${videoId} - No captions found`);
-    console.log(`[ai-sdk-transcripts] Video ${videoId} - Playability status: ${status || 'Unknown'}`);
+    console.log(`[ai-sdk-yt-transcripts] Video ${videoId} - No captions found`);
+    console.log(`[ai-sdk-yt-transcripts] Video ${videoId} - Playability status: ${status || 'Unknown'}`);
     if (reason) {
-      console.log(`[ai-sdk-transcripts] Video ${videoId} - Playability reason: ${reason}`);
+      console.log(`[ai-sdk-yt-transcripts] Video ${videoId} - Playability reason: ${reason}`);
     }
     if (subreason) {
-      console.log(`[ai-sdk-transcripts] Video ${videoId} - Playability subreason: ${subreason}`);
+      console.log(`[ai-sdk-yt-transcripts] Video ${videoId} - Playability subreason: ${subreason}`);
     }
 
     // Check for various error conditions
@@ -318,9 +318,9 @@ async function fetchTranscriptFromYouTube(
 
     // Check if captions object exists but is empty
     if (info.captions) {
-      console.log(`[ai-sdk-transcripts] Video ${videoId} - Captions object exists but no tracks available`);
+      console.log(`[ai-sdk-yt-transcripts] Video ${videoId} - Captions object exists but no tracks available`);
     } else {
-      console.log(`[ai-sdk-transcripts] Video ${videoId} - No captions object in response`);
+      console.log(`[ai-sdk-yt-transcripts] Video ${videoId} - No captions object in response`);
     }
 
     throw new Error(
@@ -333,7 +333,7 @@ async function fetchTranscriptFromYouTube(
 
   // Log available caption languages
   const availableLanguages = captionTracks.map((t) => `${t.language_code}${t.kind === 'asr' ? ' (auto)' : ''}`);
-  console.log(`[ai-sdk-transcripts] Video ${videoId} - Available languages: ${availableLanguages.join(', ')}`);
+  console.log(`[ai-sdk-yt-transcripts] Video ${videoId} - Available languages: ${availableLanguages.join(', ')}`);
 
   // 4. Find English caption track (prefer non-ASR if available)
   const englishTrack =
@@ -346,7 +346,7 @@ async function fetchTranscriptFromYouTube(
   }
 
   // 5. Fetch timedtext XML
-  console.log(`[ai-sdk-transcripts] Video ${videoId} - Fetching caption track: ${englishTrack.language_code}`);
+  console.log(`[ai-sdk-yt-transcripts] Video ${videoId} - Fetching caption track: ${englishTrack.language_code}`);
   const xml = await fetchTimedTextXml(englishTrack.base_url, proxyFetch);
 
   // 6. Parse XML to segments
@@ -357,7 +357,7 @@ async function fetchTranscriptFromYouTube(
   }
 
   const transcriptLength = segments.map((s) => s.text).join(' ').length;
-  console.log(`[ai-sdk-transcripts] Video ${videoId} - Success! ${segments.length} segments, ${transcriptLength} chars`);
+  console.log(`[ai-sdk-yt-transcripts] Video ${videoId} - Success! ${segments.length} segments, ${transcriptLength} chars`);
 
   return {
     videoId,
