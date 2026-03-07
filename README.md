@@ -1,8 +1,8 @@
 # Strapi Plugin: AI SDK Transcripts
 
-Extension plugin for [strapi-plugin-ai-sdk](https://github.com/PaulBratslavsky/strapi-plugin-ai-sdk) that adds YouTube transcript tools to your AI chat and MCP server.
+Extension plugin for [strapi-plugin-ai-sdk](https://github.com/PaulBratslavsky/strapi-plugin-ai-sdk) that adds YouTube transcript tools to the Strapi admin AI chat.
 
-Fetch, search, and browse YouTube transcripts directly from Claude Desktop or the Strapi admin chat — no copy-pasting needed.
+Fetch, search, and browse YouTube transcripts directly from the Strapi admin chat. Tools are registered with the ai-sdk's tool registry at boot time, so they're available in admin chat, public chat, and on the ai-sdk's MCP server automatically.
 
 ## Requirements
 
@@ -57,17 +57,19 @@ The plugin tests proxy connectivity on startup and logs the result. Credentials 
 
 ## Tools
 
-This plugin registers 5 tools that appear in both the Strapi admin chat and the MCP server:
+This plugin registers 5 tools with the ai-sdk tool registry:
 
-| Tool | MCP Name | Purpose |
-|------|----------|---------|
-| **fetchTranscript** | `ai_sdk_transcripts__fetch_transcript` | Fetch a transcript from YouTube and save it |
-| **getTranscript** | `ai_sdk_transcripts__get_transcript` | Retrieve a saved transcript (full, chunked, or time range) |
-| **searchTranscript** | `ai_sdk_transcripts__search_transcript` | BM25 full-text search within a transcript |
-| **listTranscripts** | `ai_sdk_transcripts__list_transcripts` | List all saved transcripts with pagination |
-| **findTranscripts** | `ai_sdk_transcripts__find_transcripts` | Search across transcripts by title, videoId, or content |
+| Tool | Purpose |
+|------|---------|
+| **fetchTranscript** | Fetch a transcript from YouTube and save it |
+| **getTranscript** | Retrieve a saved transcript (full, chunked, or time range) |
+| **searchTranscript** | BM25 full-text search within a transcript |
+| **listTranscripts** | List all saved transcripts with pagination |
+| **findTranscripts** | Search across transcripts by title, videoId, or content |
 
 All tools accept YouTube video IDs (`dQw4w9WgXcQ`) or full URLs (`https://youtube.com/watch?v=dQw4w9WgXcQ`).
+
+All tools are marked `publicSafe: true`, so they're also available in the public chat widget.
 
 ### fetchTranscript
 
@@ -124,86 +126,52 @@ Searches across all saved transcripts by title, video ID, or content.
 
 ## How It Works
 
-This plugin uses the **ai-sdk tool registry** pattern — the standard way to extend `strapi-plugin-ai-sdk` with new tools.
+On startup, the plugin's `bootstrap` function accesses the ai-sdk plugin's tool registry and registers all 5 tools directly:
+
+```ts
+// bootstrap.ts (simplified)
+const aiSdk = strapi.plugin('ai-sdk');
+for (const tool of tools) {
+  aiSdk.toolRegistry.register(tool);
+}
+```
+
+Once registered, the ai-sdk handles the rest — tools are available in admin chat, public chat (since all are `publicSafe`), and exposed on the MCP server as snake_case names (`fetch_transcript`, `get_transcript`, etc.).
 
 ### Architecture
 
 ```
-┌─────────────────────────────────┐
-│  Claude Desktop / Admin Chat    │
-└──────────────┬──────────────────┘
+┌──────────────────────────────────┐
+│  Strapi Admin Chat / MCP Client  │
+└──────────────┬───────────────────┘
                │
-┌──────────────▼──────────────────┐
-│  strapi-plugin-ai-sdk           │
-│  ┌────────────────────────────┐ │
-│  │  Tool Registry             │ │
-│  │  ├── built-in tools        │ │
-│  │  ├── ai_sdk_transcripts__* │◄├──── this plugin registers tools here
-│  │  └── other_plugin__*       │ │
-│  └────────────────────────────┘ │
-│  ┌──────────┐ ┌──────────────┐  │
-│  │ AI Chat  │ │  MCP Server  │  │
-│  └──────────┘ └──────────────┘  │
-└─────────────────────────────────┘
+┌──────────────▼───────────────────┐
+│  strapi-plugin-ai-sdk            │
+│  ┌─────────────────────────────┐ │
+│  │  Tool Registry              │ │
+│  │  ├── built-in tools         │ │
+│  │  ├── fetchTranscript        │◄├──── registered by this plugin
+│  │  ├── getTranscript          │◄├──── at boot time
+│  │  ├── searchTranscript       │◄├
+│  │  ├── listTranscripts        │◄├
+│  │  └── findTranscripts        │◄├
+│  └─────────────────────────────┘ │
+│  ┌──────────┐  ┌──────────────┐  │
+│  │ AI Chat  │  │  MCP Server  │  │
+│  └──────────┘  └──────────────┘  │
+└──────────────────────────────────┘
 ```
 
-### Registration flow
+### YouTube transcript fetching
 
-1. Strapi boots and initializes `strapi-plugin-ai-sdk`, which creates the `ToolRegistry`
-2. The ai-sdk plugin calls `discoverPluginTools()` — it loops through all installed plugins looking for an `ai-tools` service
-3. This plugin exposes an `ai-tools` service with a `getTools()` method that returns 5 tool definitions
-4. The ai-sdk registers each tool with a namespace prefix (`ai_sdk_transcripts__`) to prevent name collisions
-5. Tools are now available in admin chat, public chat (all are marked `publicSafe`), and the MCP server
+The plugin uses [youtubei.js](https://github.com/LuanRT/YouTube.js) to fetch transcripts from YouTube. It:
 
-### Building your own extension plugin
+1. Creates an Innertube client (with optional proxy via `undici`)
+2. Fetches the video info and caption tracks
+3. Parses the XML caption data into timestamped segments
+4. Saves the full transcript and timecodes to the database
 
-Any Strapi plugin can contribute tools to the ai-sdk by following this pattern:
-
-**1. Define your tools:**
-
-```ts
-// server/src/tools/my-tool.ts
-import { z } from 'zod';
-
-export const myTool = {
-  name: 'myTool',
-  description: 'What this tool does and when to use it',
-  schema: z.object({
-    query: z.string().describe('The search query'),
-  }),
-  execute: async (args, strapi) => {
-    // Your logic here — return a plain object
-    return { results: [] };
-  },
-  publicSafe: true, // set to true if safe for unauthenticated users
-};
-```
-
-**2. Create the `ai-tools` service:**
-
-```ts
-// server/src/services/ai-tools.ts
-import { myTool } from '../tools/my-tool';
-
-export default ({ strapi }) => ({
-  getTools() {
-    return [myTool];
-  },
-});
-```
-
-**3. Register the service:**
-
-```ts
-// server/src/services/index.ts
-import aiTools from './ai-tools';
-
-export default {
-  'ai-tools': aiTools,
-};
-```
-
-That's it — the ai-sdk discovers your tools automatically at boot time. No configuration needed.
+Transcripts are fetched once and cached in the database. Subsequent requests for the same video return the saved version.
 
 ## Content Type
 
@@ -223,4 +191,3 @@ Transcripts are visible in the Strapi Content Manager and can be managed manuall
 ## License
 
 MIT
-# strapi-plugin-ai-sdk-transcripts
