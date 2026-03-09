@@ -66,14 +66,10 @@ const service = ({ strapi }: { strapi: Core.Strapi }) => ({
   },
 
   async findTranscript(videoId: string) {
-    strapi.log.info(`[${PLUGIN_ID}] findTranscript called with videoId: "${videoId}"`);
     const transcriptData = await strapi.documents(CONTENT_TYPE_UID as any).findFirst({
       filters: { videoId },
     });
-
-    strapi.log.info(`[${PLUGIN_ID}] findTranscript result: ${transcriptData ? 'FOUND' : 'NOT FOUND'}`);
-    if (!transcriptData) return null;
-    return transcriptData;
+    return transcriptData || null;
   },
 });
 
