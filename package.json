@@ -1,6 +1,6 @@
 {
   "name": "strapi-plugin-ai-sdk-yt-transcripts",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "AI SDK extension plugin for YouTube transcript tools",
   "license": "MIT",
   "author": "Paul Brats <codingafterthirty@gmail.com>",
