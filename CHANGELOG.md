@@ -1,5 +1,34 @@
 # Changelog
 
+## 2.6.0 - 2026-09-16
+
+The plugin now puts its own tools on Strapi's MCP server.
+
+Until now a chat host did it: strapi-plugin-ai-chat read the five tools from the
+`ai-tools` service and registered them on `/mcp`. So the tools disappeared from
+MCP whenever ai-chat was not installed, even though a chat host needs nothing
+more than the `ai-tools` service. strapi-plugin-tanstack-ai, for one, uses the
+tools in its chat and never registers them.
+
+Bootstrap now registers them, gated on the permissions this plugin already
+owns, under the names clients already call: `youtube_transcripts__fetch_transcript`,
+`__list_transcripts`, `__get_transcript`, `__search_transcript` and
+`__find_transcripts`. Nothing changes for a client.
+
+Results keep the shape ai-chat gave them, including the refusal of a result too
+large for an MCP client, with a message the model can act on.
+
+A tool name that is already taken is left alone and logged at info level.
+ai-chat 3.4.0 and earlier still register these names, and bootstrap order is not
+ours to control, so whichever side runs first owns the tool. Checked in a real
+Strapi against all three hosts: the local ai-chat 3.5.0, no ai-chat at all, and
+the published ai-chat 3.4.0. In every case the five tools were on MCP and
+answered with stored transcripts.
+
+Pairs with strapi-plugin-ai-chat 3.5.0, which stops registering them. With an
+older ai-chat everything still works, but that plugin logs a "Skipped tool"
+warning for each of the five on every boot.
+
 ## 2.5.0 - 2026-09-04
 
 The plugin now owns its own permissions, so it works installed on its own.
