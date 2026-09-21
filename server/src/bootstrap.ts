@@ -1,6 +1,7 @@
 import type { Core } from '@strapi/strapi';
 import { ProxyAgent, fetch as undiciFetch } from 'undici';
 import { backfillMetadata } from './lib/backfill-metadata';
+import { registerMcpTools } from './lib/register-mcp-tools';
 import { registerToolPermissions } from './lib/tool-permissions';
 
 const PLUGIN_ID = 'youtube-transcripts';
@@ -36,14 +37,18 @@ async function testProxyConnection(proxyUrl: string): Promise<{ success: boolean
 }
 
 const bootstrap = async ({ strapi }: { strapi: Core.Strapi }) => {
-  // Tools are registered via the ai-tools service (see services/ai-tools.ts).
-  // The ai-chat plugin discovers and registers them with namespace prefixing.
+  // This plugin owns its tools end to end: their admin permissions and their
+  // place on Strapi's MCP server. Chat hosts (ai-chat, tanstack-ai) only read
+  // them from the ai-tools service (see services/ai-tools.ts) for their panels.
   //
-  // Their admin permissions, however, are ours. ai-chat used to declare them,
-  // which left this plugin ungovernable when installed on its own. Must happen
-  // in bootstrap: the action provider refuses registrations once Strapi is
-  // loaded.
+  // Both must happen in bootstrap. The action provider refuses registrations
+  // once Strapi is loaded, and the MCP server refuses tools once it has
+  // started. Permissions go first so each tool's gating action exists.
   await registerToolPermissions(strapi);
+  const onMcp = registerMcpTools(strapi);
+  if (onMcp > 0) {
+    strapi.log.info(`[${PLUGIN_ID}] registered ${onMcp} MCP tool(s)`);
+  }
 
   // Log proxy configuration status and test connectivity
   const pluginConfig = strapi.config.get(`plugin::${PLUGIN_ID}`) as PluginConfig | undefined;

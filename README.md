@@ -7,11 +7,15 @@ Give it a video URL and it pulls the transcript, stores it as a Strapi content
 type, and gives you an admin page plus a REST API to search and read it. There
 is no AI requirement and nothing to configure beyond enabling the plugin.
 
-If [`strapi-plugin-ai-chat`](https://github.com/PaulBratslavsky/strapi-plugin-ai-chat)
-happens to be installed, this plugin's five tools are discovered automatically
-and become available to the admin AI chat and to Strapi's built-in MCP server.
+When the host enables Strapi's built-in MCP server, this plugin puts its five
+tools on it, so Claude, Cursor and other MCP clients can use them. No chat
+plugin is needed for that.
+
+If a chat plugin is installed, such as
+[`strapi-plugin-ai-chat`](https://github.com/PaulBratslavsky/strapi-plugin-ai-chat)
+or `strapi-plugin-tanstack-ai`, it picks the same tools up for its admin chat.
 That is additive. Nothing here depends on it, and removing it leaves a working
-transcript plugin behind.
+transcript plugin behind, tools on MCP included.
 
 ## What you get
 
@@ -175,12 +179,14 @@ export default () => ({
 });
 ```
 
-Once discovered, ai-sdk handles the rest. The tools become available in the
-admin AI chat and, when the host enables Strapi's MCP server
-(`mcp: { enabled: true }` in `config/server.ts`), over `/mcp` under snake_case
-names such as `ai_sdk_yt_transcripts__get_transcript`.
+A chat plugin reads that service to offer the tools in its admin chat. MCP is
+handled here: when the host enables Strapi's MCP server
+(`mcp: { enabled: true }` in `config/server.ts`), this plugin registers the
+tools over `/mcp` under snake_case names such as
+`youtube_transcripts__get_transcript`, whether or not a chat plugin is
+installed.
 
-Each tool has its own permission, `plugin::ai-sdk-yt-transcripts.tool.<slug>`,
+Each tool has its own permission, `plugin::youtube-transcripts.tool.<slug>`,
 which appears under this plugin's own section of **Settings > Roles**. Granted
 on a role it decides what an admin's chat can use; granted on an admin token it
 decides what that token exposes over MCP. `fetchTranscript` is the one to grant
@@ -191,30 +197,24 @@ cost rather than a database write.
 ### Architecture
 
 ```
-┌──────────────────────────────────────┐
-│  Strapi Admin Chat / MCP Client      │
-└──────────────┬───────────────────────┘
-               │
-┌──────────────▼───────────────────────┐
-│  strapi-plugin-ai-chat                │
-│  ┌─────────────────────────────────┐ │
-│  │  Tool Registry                  │ │
-│  │  ├── built-in tools             │ │
-│  │  ├── ai-sdk-yt-transcripts__*      │◄├── discovered via ai-tools service
-│  │  └── other-plugin__*            │ │
-│  └─────────────────────────────────┘ │
-│  ┌──────────┐  ┌──────────────┐      │
-│  │ AI Chat  │  │  MCP Server  │      │
-│  └──────────┘  └──────────────┘      │
-└──────────────────────────────────────┘
-
-┌──────────────────────────────────────┐
-│  strapi-plugin-youtube-transcripts     │
-│  ├── ai-tools service (5 tools)      │
-│  ├── REST API (GET /yt-transcript/)  │
-│  ├── Transcript content type         │
-│  └── YouTube fetching service        │
-└──────────────────────────────────────┘
+┌──────────────────────┐   ┌──────────────────────────┐
+│  MCP client          │   │  Strapi admin chat        │
+│  (Claude, Cursor)    │   │  (ai-chat, tanstack-ai)   │
+└──────────┬───────────┘   └────────────┬─────────────┘
+           │ POST /mcp                  │ reads ai-tools
+┌──────────▼───────────┐                │
+│  Strapi MCP server   │                │
+└──────────▲───────────┘                │
+           │ registerTool               │
+┌──────────┴────────────────────────────▼─────────────┐
+│  strapi-plugin-youtube-transcripts                   │
+│  ├── registers its 5 tools on MCP (bootstrap)        │
+│  ├── registers their permissions (bootstrap)         │
+│  ├── ai-tools service (the same 5 tools, for chat)   │
+│  ├── REST API (GET /yt-transcript/)                  │
+│  ├── Transcript content type                         │
+│  └── YouTube fetching service                        │
+└──────────────────────────────────────────────────────┘
 ```
 
 ### YouTube transcript fetching
