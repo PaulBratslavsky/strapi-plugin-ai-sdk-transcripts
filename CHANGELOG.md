@@ -1,5 +1,37 @@
 # Changelog
 
+## 2.6.1 - 2026-09-26
+
+Two fixes found by installing 2.6.0 into a clean Strapi 5.55.1 app.
+
+`PROXY_URL` now does what the boot warning said it did. The warning told you to
+"Set PROXY_URL in .env", but the default config was a hard-coded empty string
+and nothing read that variable, so following the advice changed nothing. The
+default for `proxyUrl` now reads `PROXY_URL`, and the warning also names the
+plugin config route: `proxyUrl` in `config/plugins.ts`. A `proxyUrl` set there
+still wins over the variable. Checked in a real Strapi: with `PROXY_URL` in
+`.env` and no plugin config, a transcript fetch went through a local proxy that
+logged both YouTube requests.
+
+One behaviour change follows from that. A host that already had `PROXY_URL` set
+for something else, and no `proxyUrl` in the plugin config, will now send
+YouTube requests through that proxy. Set `proxyUrl: ''` in the plugin config to
+opt out.
+
+`@strapi/sdk-plugin` is no longer a peer dependency. It is the build tool for
+this package, not something a host needs, and npm 7+ installs non-optional peers
+automatically, so every host that installed the plugin also got
+`@strapi/sdk-plugin` (5.4.0 in the clean install). It stays in devDependencies,
+and nothing in the built package imports it. Checked by installing the packed
+tarball into a fresh Strapi 5.55.1 app: `@strapi/sdk-plugin` is absent from
+`node_modules` and from the lockfile.
+
+The README config example did not boot: it used the key `ai-sdk-yt-transcripts`
+with `resolve: "strapi-plugin-youtube-transcripts"`, which Strapi rejects with
+"couldn't be resolved". It now uses the key `youtube-transcripts` with no
+`resolve`, and no longer says ai-chat must be configured first, since ai-chat is
+optional.
+
 ## 2.6.0 - 2026-09-16
 
 The plugin now puts its own tools on Strapi's MCP server.

@@ -66,7 +66,10 @@ const bootstrap = async ({ strapi }: { strapi: Core.Strapi }) => {
       }
     });
   } else {
-    strapi.log.warn(`[${PLUGIN_ID}] No proxy configured - YouTube may block requests. Set PROXY_URL in .env`);
+    strapi.log.warn(
+      `[${PLUGIN_ID}] No proxy configured - YouTube may block requests. Set PROXY_URL in .env, ` +
+        `or set proxyUrl in the plugin config (config/plugins.ts), for example proxyUrl: env('PROXY_URL')`
+    );
   }
 
   // Opt-in only. Runs after boot rather than during it, because it makes one
