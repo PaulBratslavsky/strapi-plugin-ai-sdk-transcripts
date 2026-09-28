@@ -46,22 +46,14 @@ npm install strapi-plugin-youtube-transcripts
 
 ## Configuration
 
-Add the plugin to your `config/plugins.ts`:
+Installing the package enables the plugin. To change its settings, add a
+`youtube-transcripts` entry to `config/plugins.ts`. The key must be exactly
+`youtube-transcripts`, and no `resolve` is needed for the npm package:
 
 ```ts
 export default ({ env }) => ({
-  // The ai-sdk plugin must be configured first
-  "ai-sdk": {
+  "youtube-transcripts": {
     enabled: true,
-    resolve: "strapi-plugin-ai-chat",
-    config: {
-      anthropicApiKey: env("ANTHROPIC_API_KEY"),
-    },
-  },
-
-  "ai-sdk-yt-transcripts": {
-    enabled: true,
-    resolve: "strapi-plugin-youtube-transcripts",
     config: {
       proxyUrl: env("PROXY_URL"),           // Optional: HTTP/HTTPS proxy for YouTube requests
       chunkSizeSeconds: 300,                // Chunk size for transcript pagination (default: 5 min)
@@ -73,13 +65,25 @@ export default ({ env }) => ({
 });
 ```
 
+If you use `strapi-plugin-ai-chat`, configure it as its own README describes.
+
 ### Proxy setup
 
-YouTube may block requests from server IPs. If you see `LOGIN_REQUIRED` errors, configure a residential proxy:
+YouTube may block requests from server IPs. If you see `LOGIN_REQUIRED` errors, configure a residential proxy. Either route works:
 
-```env
-PROXY_URL=http://user:password@proxy.example.com:8080
-```
+1. Set `PROXY_URL` in your `.env`. The plugin reads it as the default for `proxyUrl` (since 2.6.1):
+
+   ```env
+   PROXY_URL=http://user:password@proxy.example.com:8080
+   ```
+
+2. Or set `proxyUrl` in the plugin config in `config/plugins.ts`, as in the example above. A value set there wins over `PROXY_URL`:
+
+   ```ts
+   config: {
+     proxyUrl: env("PROXY_URL"),
+   },
+   ```
 
 The plugin tests proxy connectivity on startup and logs the result. Credentials are masked in logs.
 
