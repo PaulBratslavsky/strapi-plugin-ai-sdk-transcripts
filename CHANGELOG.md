@@ -1,8 +1,8 @@
 # Changelog
 
-## 2.6.1 - 2026-09-26
+## 2.6.1 - 2026-09-28
 
-Two fixes found by installing 2.6.0 into a clean Strapi 5.55.1 app.
+Three fixes found by installing 2.6.0 into a clean Strapi 5.55.1 app.
 
 `PROXY_URL` now does what the boot warning said it did. The warning told you to
 "Set PROXY_URL in .env", but the default config was a hard-coded empty string
@@ -31,6 +31,14 @@ with `resolve: "strapi-plugin-youtube-transcripts"`, which Strapi rejects with
 "couldn't be resolved". It now uses the key `youtube-transcripts` with no
 `resolve`, and no longer says ai-chat must be configured first, since ai-chat is
 optional.
+
+The first boot of a fresh database no longer logs a migration error. The
+migration from the old `ai-sdk-yt-transcripts` id runs in register, before
+Strapi creates `admin_permissions`, so on a new install its grant rename failed
+with `no such table: admin_permissions` and logged a red "migration failed"
+line. Harmless, since there are no old grants on a new database, but every new
+install saw it. That step is now skipped when the table does not exist. Present
+since 2.1.0.
 
 ## 2.6.0 - 2026-09-16
 
