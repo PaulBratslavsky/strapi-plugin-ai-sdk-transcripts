@@ -53,6 +53,12 @@ export async function migrateFromAiSdkId(strapi: Core.Strapi): Promise<void> {
 
     // Permission grants are rows keyed by an action string, so a renamed id
     // leaves every tick box in Settings > Roles pointing at nothing.
+    // On a fresh database the table does not exist yet (register runs before
+    // Strapi creates it), and then there are no grants to carry forward.
+    if (!(await tableExists(strapi, 'admin_permissions'))) {
+      return;
+    }
+
     const renamed = await strapi.db
       .connection('admin_permissions')
       .where('action', 'like', `${OLD_ACTION_PREFIX}%`)
